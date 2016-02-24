@@ -1,6 +1,6 @@
 console = {
     log: function() {
-        // console._message('[DEBUG]', arguments);
+        console._message('[DEBUG]', arguments);
     },
     warn: function() {
         console._message('[WARNING]', arguments);

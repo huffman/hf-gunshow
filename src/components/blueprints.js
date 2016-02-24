@@ -56,6 +56,8 @@ function _createEntity(sceneName, entityManager, parentID, data) {
     for (var i in children) {
         _createEntity(sceneName, entityManager, entityID, children[i]);
     }
+
+    return entityID;
 }
 
 createScene = function(scene) {
@@ -65,7 +67,7 @@ createScene = function(scene) {
 };
 
 createObject = function(object) {
-    _createEntity('unknown', Entities, null, object);
+    return _createEntity('unknown', Entities, null, object);
 };
 
 destroyScene = function(name) {
@@ -102,6 +104,8 @@ registerExtendedBlueprint = function(name, baseName, data) {
         }
     }
 
+    print("registering extended: ", name, baseName, JSON.stringify(data));
+
     registerBlueprint(name, data);
 };
 
@@ -120,3 +124,5 @@ spawnBlueprint = function(name, overrideProperties) {
     }
     return createObject(properties);
 };
+
+exports.spawnBlueprint = spawnBlueprint;

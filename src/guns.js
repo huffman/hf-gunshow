@@ -1,4 +1,5 @@
-BASE_URL = "http://localhost:8000/assets/kenney/weapons/";
+// BASE_URL = "http://192.168.0.106:8000/assets/kenney/weapons/";
+BASE_URL = Script.resolvePath("../assets/kenney/weapons/");
 GUNS = {
   "uziGoldLong": {
     "modelURL": BASE_URL + "uziGoldLong.fbx",

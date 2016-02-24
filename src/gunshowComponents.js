@@ -1,5 +1,7 @@
+const blueprints = require('components/blueprints.js');
 const utils = require('components/utils.js');
 const audio = require('audio.js');
+const debug = require('debug.js');
 
 const createComponentType = require('components/componentsExtra.js').createComponentType;
 
@@ -23,22 +25,35 @@ const EVENTS = {
 
 createComponentType('hitscanGun', {
     ctor: function(entityManager, properties) {
+        console.log("hitscanGun");
         this.barrelPointOffset = arg(properties, 'barrelPointOffset', { x: 0, y: 0, z: 0 });
         this.bulletPower = arg(properties, 'power', 5);
-        this.soundURL = arg(properties, 'fireSoundURL', AUDIO_GUN_SHOT_URL);
-        this.fireSound = SoundCache.getSound(soundURL);
+        this.soundURL = arg(properties, 'fireSoundURL', audio.grenadeLauncher);
+        this.fireSound = SoundCache.getSound(this.soundURL);
         var hitTypeString = arg(properties, 'hitType', 'PHYSICAL');
         this.hitType = HIT_TYPE[hitTypeString];
         this.damage = arg(properties, 'damage', 10.0);
+        this.relativeRotation = getRelativeRotation(this.entityManager.entityID);
 
         entityManager.on('useBegin', this.onUseBegin.bind(this));
         entityManager.on('useEnd', this.onUseEnd.bind(this));
+              console.log("hitscanGunEnd");
     },
     onUseBegin: function(entityID, args) {
-        print("use begin", this.entityManager.entityID);
+        print("use begin", this.entityManager.entityID, this.soundURL);
+        // var properties = Entities.getEntityProperties(this.entityManager.entityID, ['position', 'rotation']);
+        // var origin = Vec3.sum(properties.position, this.barrelPointOffset);
+        // var forward = Quat.getFront(properties.rotation);
+
         var properties = Entities.getEntityProperties(this.entityManager.entityID, ['position', 'rotation']);
-        var origin = Vec3.sum(properties.position, this.barrelPointOffset);
-        var forward = Quat.getFront(properties.rotation);
+        var rotation = Quat.multiply(properties.rotation, this.relativeRotation);
+        var forward = Quat.getFront(rotation);
+        var origin = Vec3.sum(properties.position, Vec3.multiplyQbyV(rotation, this.barrelPointOffset));
+
+        print('debug', debug.drawLine);
+        debug.drawLine(origin, Vec3.sum(origin, forward));
+
+        Vec3.print('forward', forward);
 
         Audio.playSound(this.fireSound, {
             volume: 0.8,
@@ -48,12 +63,15 @@ createComponentType('hitscanGun', {
         var pickRay = { origin: origin, direction: forward };
         var intersectionInfo = Entities.findRayIntersectionBlocking(pickRay, true);
         if (intersectionInfo.intersects) {
+            console.log("Hit: ", intersectionInfo.entityID);
             Entities.getEntityProperties(intersectionInfo.entityID, ['velocity']);
             var newVelocity = Vec3.sum(properties.velocity, Vec3.multiply(forward, this.bulletPower));
             Entities.editEntity(intersectionInfo.entityID, {
                 velocity: newVelocity
             });
             this.entityManager.sendEvent(intersectionInfo.entityID, 'hit', { type: this.hitType, damage: this.damage });
+        } else {
+            console.log("No hit");
         }
     },
     onUseEnd: function(args) {
@@ -63,7 +81,7 @@ createComponentType('hitscanGun', {
 createComponentType('projectileGun', {
     ctor: function(entityManager, properties) {
         console.log("init gun component", properties.fireSoundURL);
-        var soundURL = properties.fireSoundURL || AUDIO_GUN_SHOT_URL;
+        var soundURL = properties.fireSoundURL || audio.grenadeLauncher;
         console.log("url", soundURL);
         this.fireSound = SoundCache.getSound(soundURL);
         this.projectileBlueprint = properties.projectileBlueprint || 'nailgun.nail';
@@ -164,7 +182,7 @@ createComponentType('particleGun', {
         }
     },
     checkForEntitiesBeingHit: function() {
-        console.log("checkForEntitiesBeingHit()");
+        //console.log("checkForEntitiesBeingHit()");
         var properties = Entities.getEntityProperties(this.entityManager.entityID, ['position', 'rotation']);
         var rotation = Quat.multiply(properties.rotation, this.relativeRotation);
         var forward = Quat.getFront(rotation);
@@ -346,11 +364,11 @@ createComponentType('mortal', {
     }
 });
 
-
 createComponentType('flammable', {
     init: function() {
         console.log("Flammable registering for hit event");
         this.entityManager.on('hit', this.onHit.bind(this));
+        //this.entityManager.emit('hit', 'on:  test');
         this.onFire = false;
         this.flameID = null;
     },
@@ -360,14 +378,42 @@ createComponentType('flammable', {
         if (args.type == HIT_TYPE.FIRE) {
             console.log("ON FIRE!!!");
             if (!this.onFire) {
-                var properties = Entities.getEntityProperties(this.entityManager.entityID, ['position']);
-                this.flameID = spawnBlueprint('particles.flame', {
-                    position: properties.position
+                //var properties = Entities.getEntityProperties(this.entityManager.entityID, ['position']);
+                this.flameID = spawnBlueprint('particle.smoke', {
+                    lifetime: 30,
+                    name: "FIRE",
+                    parentID: this.entityManager.entityID,
+                    localPosition: { x: 0, y: 0, z: 0 },//properties.position,
+                    dimensions: { x: 0.1, y: 0.1, z: 0.1 },
+                    lifespan: 2.5,
+                    emitRate: 80,
+                    emitSpeed: 0.5,
+                    "polarStart": 0,
+                    "polarFinish": 0.3,
+                    emitterShouldTrail: false,
+                    additiveBlending: true,
+                    isEmitting: true,
+                    emitAcceleration: {
+                        x: 0,
+                        y: 0,
+                        z: 0
+                    },
+                    accelerationSpread: {
+                        x: 0.1,
+                        y: 0,
+                        z: 0.1
+                    }
                 });
                 this.onFire = true;
+                Script.setTimeout(function() {
+                    console.log("Deleting", this.flameID);
+                    Entities.editEntity(this.flameID, { isEmitting: false });
+                    this.onFire = false;
+                }.bind(this), 25000);
             }
         } else if (args.type == HIT_TYPE.WATER) {
             if (this.onFire) {
+                console.log("NO LONGER ON FIRE");
                 this.onFire = false;
                 Entities.deleteEntity(this.flameID);
                 this.flameID = null;
@@ -384,5 +430,36 @@ createComponentType('enchantable', {
     },
     onEnchant: function(localPosition) {
         // Attach a sparkle entity
+    }
+});
+
+
+createComponentType('skeetShooter', {
+    ctor: function(entityManager, properties) {
+        this.blueprintName = arg(properties, 'blueprint', 'clayPigeon');
+        this.shootOffset = arg(properties, 'shootOffset', { x: 0, y: 0, z: 0 });
+        this.shootSpeed = arg(properties, 'shootSpeed', 5);
+    },
+    onHit: function() {
+        this.shoot();
+    },
+    onPress: function() {
+        this.shoot();
+    },
+    shoot: function() {
+        const properties = Entities.getEntityProperties(this.entityManager.entityID, ['position', 'rotation']);
+        const forward = Quat.front(properties.rotation);
+        const velocity = Vec3.multiply(this.shootSpeed, forward);
+        const rotatedShootOffset = Vec3.multiplyQbyV(properties.rotation, this.shootOffset);
+        const shootFrom = Vec3.sum(properties.position, rotatedShootOffset);
+        blueprints.spawnBlueprint(this.blueprintName, {
+            properties: shootFrom,
+            velocity: velocity
+        });
+    }
+}, {
+    init: function() {
+    },
+    onShoot: function() {
     }
 });

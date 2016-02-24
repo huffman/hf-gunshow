@@ -140,14 +140,19 @@ function createComponent(entityManager, type, properties) {
 
     var componentInfo = componentInfos[type];
     var component;
-    if (entityManager.isServer) {
-        if (componentInfo.serverCtor) {
-            component = new componentInfo.serverCtor(entityManager, properties);
+    try {
+        if (entityManager.isServer) {
+            if (componentInfo.serverCtor) {
+                component = new componentInfo.serverCtor(entityManager, properties);
+            }
+        } else {
+            if (componentInfo.clientCtor) {
+                component = new componentInfo.clientCtor(entityManager, properties);
+            }
         }
-    } else {
-        if (componentInfo.clientCtor) {
-            component = new componentInfo.clientCtor(entityManager, properties);
-        }
+    } catch (e) {
+        console.error("Error calling ctor for " + type, e);
+        (function () { console.error(new Error().stack); })();
     }
 
     return component;
@@ -238,7 +243,6 @@ exports.hasComponent = function(entityID, componentType) {
     if (userData) {
         var data = parseJSON(userData);
         return data && data.hasOwnProperty('components') && data.components.hasOwnProperty(componentType);
-           
     }
     return null;
 };

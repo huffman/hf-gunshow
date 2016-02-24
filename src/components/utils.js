@@ -32,24 +32,32 @@ EventEmitter = function() {
 };
 EventEmitter.prototype = {
     on: function(event, fn) {
-        console.log("on: ", event, fn);
+        // console.log("on: ", event, fn);
         if (event in this.eventListeners) {
             this.eventListeners[event].push(fn);
         } else {
             this.eventListeners[event] = [fn];
         }
-        console.log("on: ", event);
+        // console.log("on: ", event, this.eventListeners[event][0]);
     },
     emitWithArgs: function(event, args) {
         // console.log('emit', this.entityID, event, this);
         var listeners = this.eventListeners[event];
         if (listeners) {
-            if (event != 'update') {
-                console.log('emit', event, JSON.stringify(args));
-                console.log('emit listeners', JSON.stringify(listeners));
-            }
+            // if (event != 'update') {
+            //     console.log('emit', event, this.entityID, JSON.stringify(args));
+            //     console.log('emit listeners', listeners[0]);
+            // }
             for (var i in listeners) {
-                listeners[i].apply(null, args);
+                try {
+                    if (!Array.isArray(args)) {
+                        args = [args];
+                    }
+                    listeners[i].apply(null, args);
+                } catch (e) {
+                    console.error("Error calling callback", e);
+                    (function () { console.error(new Error().stack); })();
+                }
             }
         } else {
             if (event != 'update') {

@@ -1,6 +1,7 @@
 var guns = require('guns.js').guns;
 var audio = require('audio.js');
 var utils = require('components/utils.js');
+const natureAssets = require('naturePack.js').assets;
 
 print("Loaded guns:", guns, guns.flamethrower);
 
@@ -151,8 +152,8 @@ registerBlueprint('particle.smoke', {
     "radiusFinish": 0.07,
     "alpha": 1,
     "alphaSpread": 0,
-    "alphaStart": 1,
-    "alphaFinish": 1,
+    "alphaStart": 0,
+    "alphaFinish": 0,
     // "alpha": 0.7,
     // "alphaSpread": 0,
     // "alphaStart": 0,
@@ -202,6 +203,76 @@ registerBlueprint('particle.sparkle', {
     "alphaFinish": 0,
     "additiveBlending": 0,
     "textures": TEXTURE_STAR
+});
+
+registerBlueprint('gun.baseHitScan', {
+    type: 'Model',
+    shapeType: 'box',
+    collisionsWillMove: true,
+    dynamic: true,
+    gravity: {x: 0, y: -5.0, z: 0},
+    restitution: 0,
+    collisionSoundURL: "https://s3.amazonaws.com/hifi-public/sounds/Guns/Gun_Drop_and_Metalli_1.wav",
+    components: {
+        hitscanGun: {
+            //fireSoundURL: audio.flamethrower,
+            barrelPointOffset: { x: 0, y: 0.02, z: -0.3 }
+        },
+        flammable: {}
+    },
+    userData: {
+        grabbableKey: {
+            spatialKey: {
+                relativePosition: {
+                    x: 0,
+                    y: 0.05,
+                    z: -0.08
+                },
+                relativeRotation: Quat.fromPitchYawRollDegrees(0, 180, 0)
+            },
+            invertSolidWhileHeld: true
+        }
+    },
+    children: [
+        {
+            blueprint: 'particle.smoke',
+            name: 'particle-trigger',
+            dimensions: { x: 0.1, y: 0.1, z: 0.1 },
+            localPosition: { x: 0 , y: 0.08, z: 0.32 },
+            localRotation: Quat.fromPitchYawRollDegrees(0, 0, 0),
+            lifespan: 0.2,
+            emitRate: 80,
+            emitSpeed: 6,
+            "polarStart": 0,
+            "polarFinish": 0.1,
+            emitterShouldTrail: false,
+            additiveBlending: true,
+            isEmitting: false,
+            emitAcceleration: {
+                x: 0,
+                y: 0,
+                z: 3.0
+            },
+            accelerationSpread: {
+                x: 0.1,
+                y: 0,
+                z: 0.1
+            }
+        }
+    ]
+});
+
+
+registerExtendedBlueprint('gun.uzi', 'gun.baseHitScan', {
+    name: 'uzi',
+    modelURL: guns.uziGold.modelURL,
+    dimensions: guns.uziGold.dimensions
+});
+
+registerExtendedBlueprint('gun.pistol', 'gun.baseHitScan', {
+    name: 'pistol',
+    modelURL: guns.pistol.modelURL,
+    dimensions: guns.pistol.dimensions
 });
 
 
@@ -263,6 +334,47 @@ registerBlueprint('gun.flamethrower', {
         }
     ]
 });
+// registerExtendedBlueprint('gun.extinguisher', 'gun.flamethrower', {
+//     name: 'extinguisher',
+//     modelURL: guns.flamethrower.modelURL,
+//     dimensions: guns.flamethrower.dimensions,
+//     components: {
+//         particleGun: {
+//             hitType: 'WATER',
+//             audioURL: audio.flamethrower,
+//             barrelPointOffset: { x: 0, y: 0, z: -1.0 }
+//         }
+//     },
+//     children: [
+//         {
+//             blueprint: 'particle.smoke',
+//             name: 'particle-trigger',
+//             dimensions: { x: 0.1, y: 0.1, z: 0.1 },
+//             localPosition: { x: 0 , y: 0.08, z: 0.32 },
+//             localRotation: Quat.fromPitchYawRollDegrees(0, 0, 0),
+//             color: { red: 128, green: 128, blue: 128 },
+//             lifespan: 0.2,
+//             emitRate: 80,
+//             emitSpeed: 6,
+//             "polarStart": 0,
+//             "polarFinish": 0.1,
+//             emitterShouldTrail: false,
+//             additiveBlending: true,
+//             isEmitting: false,
+//             emitAcceleration: {
+//                 x: 0,
+//                 y: 0,
+//                 z: 3.0
+//             },
+//             accelerationSpread: {
+//                 x: 0.1,
+//                 y: 0,
+//                 z: 0.1
+//             }
+//         }
+//     ]
+// });
+//
 
 registerExtendedBlueprint('particle.fire', 'particle.smoke', {
     localPosition: { x: 0 , y: 0.08, z: 0.32 },
@@ -370,6 +482,7 @@ registerBlueprint('weapon.smokeGrenade', {
 });
 
 registerBlueprint('particle.explosion', {
+    type: "ParticleEffect",
     "ignoreForCollisions": 0,
     "collisionMask": 31,
     "collidesWith": "static,dynamic,kinematic,myAvatar,otherAvatar,",
@@ -456,18 +569,62 @@ registerBlueprint('nailgun.nail', {
         sticky: {}
     }
 });
+//
+// registerBlueprint('gun.pistol', utils.extend(utils.deepCopy(guns.pistolSilencer), {
+//     components: {
+//         hitscanGun: {
+//             barrelPointOffset: {
+//                 x: 0,
+//                 y: 0.05,
+//                 z: -0.05
+//             }
+//         }
+//     }
+// }));
 
-registerBlueprint('gun.pistol', utils.extend(utils.deepCopy(guns.pistolSilencer), {
+
+registerBlueprint('tree.0', {
+    type: "Model",
+    name: "Tree",
+    modelURL: natureAssets["Tree_01"].modelURL,
+    dimensions: natureAssets["Tree_01"].dimensions,
+    shapeType: 'box',
     components: {
-        hitscanGun: {
-            barrelPointOffset: {
-                x: 0,
-                y: 0.05,
-                z: -0.05
-            }
+        flammable: {}
+    }
+});
+
+registerBlueprint('tree.1', {
+    type: "Model",
+    name: "Tree",
+    modelURL: natureAssets["Tree_02"].modelURL,
+    dimensions: natureAssets["Tree_02"].dimensions,
+    shapeType: 'box',
+    components: {
+        flammable: {}
+    }
+});
+
+registerBlueprint('clayPigeon', {
+    type: 'Sphere',
+    name: 'Clay Pigeon',
+    dimensions: {
+        x: 0.3,
+        y: 0.075,
+        z: 0.3
+    }
+});
+
+registerBlueprint('clayPigeonShooter', {
+    type: 'Box',
+    dimensions: { x: 0.5, y: 0.5, z: 0.5 },
+    color: { red: 128, green: 128, blue: 255 },
+    components: {
+        skeetShooter: {
+            shootOffset: { x: 0, y: 0, z: 0.5 }
         }
     }
-}));
+});
 
 
 

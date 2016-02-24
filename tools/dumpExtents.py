@@ -43,12 +43,13 @@ def get_extents(path):
             found = True
         else:
             print('not mesh', g)
+        #print [max_coords[i] - min_coords[i] for i in range(3)]
 
 
     scene.Destroy()
 
     if found:
-        return [max_coords[i] - min_coords[i] * 8 for i in range(3)]
+        return [max_coords[i] - min_coords[i] for i in range(3)]
 
     return None
 
