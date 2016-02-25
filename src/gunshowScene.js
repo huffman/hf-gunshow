@@ -586,7 +586,7 @@ for (var i = 0; i < 2 * Math.PI; i += Math.PI / 8) {
     var z = Math.sin(i) * 1.5;
     SCENE.entities.push({
         blueprint: 'gun.flamethrower',
-        position: Vec3.sum(fireplacePosition, { x: x, y: 3.5, z: 0 })
+        position: Vec3.sum(fireplacePosition, { x: x, y: 3.5, z: z })
     })
 }
 
@@ -604,19 +604,18 @@ for (var k in TREES) {
     }, t.position);
 }
 
+SCENE.entities = SCENE.entities.concat(TREES);
+
 var x = 0;
 for (var k in trees) {
     trees[k].position = {
         x: x + 10,
         y: 0,
-        z: 10
+        z: 16
     }
     x += 2;
-    console.log("PUSHING: ", JSON.stringify(trees[k]));
     SCENE.entities.push(trees[k]);
 }
-
-//SCENE.entities = SCENE.entities.concat(TREES);
 
 //SCENE.entities = SCENE.entities.slice(20);
 Script.scriptEnding.connect(function() {
