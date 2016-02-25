@@ -365,29 +365,76 @@ createComponentType('mortal', {
 });
 
 createComponentType('flammable', {
+    ctor: function(entityManager, properties) {
+        this.killAnimationURL = arg(properties, 'killAnimationURL', null);
+        this.fireAnimationURL = arg(properties, 'fireAnimationURL', null);
+        this.size = arg(properties, 'size', 1);
+        console.log("KILL ANIAMTION", this.killAnimationURL);
+    },
     init: function() {
         console.log("Flammable registering for hit event");
         this.entityManager.on('hit', this.onHit.bind(this));
         //this.entityManager.emit('hit', 'on:  test');
         this.onFire = false;
         this.flameID = null;
+        this.maxDurability = 150;
+        this.durability = this.maxDurability;
+        this.active = true;
     },
     onHit: function(args) {
+        if (!this.active) { return; }
         console.log("FLAMMABLE HIT");
         console.log("HIT", JSON.stringify(args));
         if (args.type == HIT_TYPE.FIRE) {
             console.log("ON FIRE!!!");
-            if (!this.onFire) {
+            this.durability -= args.damage;
+            // Play sound for each hit
+            console.log("DURABILITY", this.durability);
+            if (this.durability <= 0) {
+                this.active = false;
+                console.log("DURABILITY <= 0");
+
+                if (this.fireTimeout) {
+                    Script.clearTimeout(this.fireTimeout);
+                }
+                if (this.killAnimationURL) {
+                    Entities.editEntity(this.entityManager.entityID, {
+                        // animationURL: this.killAnimationURL,
+                        // animationIsPlaying: true,
+                        // animationLoop: false,
+                        // animationLooping: false,
+                        // loop: false,
+                        animation: {
+                            url: this.killAnimationURL,
+                            running: true,
+                            currentFrame: 0,
+                            lastFrame: 30,
+                            loop: false
+                        }
+                    });
+                }
+                // stop listening for hits
+
+                // play big fire sound
+
+                Script.setTimeout(function() {
+                    Entities.deleteEntity(this.flameID);
+                    Entities.deleteEntity(this.entityManager.entityID);
+                }.bind(this), 2000);
+            } else if (!this.onFire) {
                 //var properties = Entities.getEntityProperties(this.entityManager.entityID, ['position']);
                 this.flameID = spawnBlueprint('particle.smoke', {
                     lifetime: 30,
                     name: "FIRE",
                     parentID: this.entityManager.entityID,
-                    localPosition: { x: 0, y: 0, z: 0 },//properties.position,
+                    localPosition: { x: 0, y: 0, z: 0 },
                     dimensions: { x: 0.1, y: 0.1, z: 0.1 },
                     lifespan: 2.5,
                     emitRate: 80,
                     emitSpeed: 0.5,
+                    particleRadius: this.size * 0.07,
+                    radiusStart: this.size * 0.07,
+                    radiusFinish: this.size * 0.07,
                     "polarStart": 0,
                     "polarFinish": 0.3,
                     emitterShouldTrail: false,
@@ -404,22 +451,45 @@ createComponentType('flammable', {
                         z: 0.1
                     }
                 });
+                if (this.fireAnimationURL) {
+                    console.log("PLAYING FIRE ANIAMTION");
+                    Entities.editEntity(this.entityManager.entityID, {
+                        animation: {
+                            url: this.fireAnimationURL,
+                            running: true,
+                            currentFrame: 0,
+                            lastFrame: 3000,
+                            loop: true
+                        }
+                    });
+                }
                 this.onFire = true;
-                Script.setTimeout(function() {
-                    console.log("Deleting", this.flameID);
-                    Entities.editEntity(this.flameID, { isEmitting: false });
-                    this.onFire = false;
-                }.bind(this), 25000);
+                this.fireTimeout = Script.setTimeout(this.extinguish.bind(this), 25000);
             }
         } else if (args.type == HIT_TYPE.WATER) {
-            if (this.onFire) {
-                console.log("NO LONGER ON FIRE");
-                this.onFire = false;
+            this.extinguish();
+        }
+    },
+    extinguish: function() {
+        if (this.onFire) {
+            console.log("NO LONGER ON FIRE");
+            this.onFire = false;
+            this.durability = this.maxDurability;
+            if (this.flameID) {
                 Entities.deleteEntity(this.flameID);
                 this.flameID = null;
             }
+            if (this.fireAnimationURL) {
+                Entities.editEntity(this.entityManager.entityID, {
+                    animation: {
+                        running: false,
+                        currentFrame: 0
+                    }
+                });
+            }
         }
     }
+
 }, {
 });
 
