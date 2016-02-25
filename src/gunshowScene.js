@@ -586,7 +586,7 @@ for (var i = 0; i < 2 * Math.PI; i += Math.PI / 8) {
     var z = Math.sin(i) * 1.5;
     SCENE.entities.push({
         blueprint: 'gun.flamethrower',
-        position: Vec3.sum(fireplacePosition, { x: x, y: 3.5, z: 0 });
+        position: Vec3.sum(fireplacePosition, { x: x, y: 3.5, z: 0 })
     })
 }
 
